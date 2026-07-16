@@ -44,16 +44,14 @@
 
     #stage {
       position: absolute;
-      top: 0;
-      left: 0;
-      transform-origin: 0 0;
-      will-change: transform;
+      inset: 0;
     }
 
     #stage svg {
       display: block;
+      width: 100%;
+      height: 100%;
       max-width: none;
-      height: auto;
     }
 
     #toolbar {
@@ -117,6 +115,10 @@
       pointer-events: none;
     }
 
+    #message[hidden] {
+      display: none;
+    }
+
     body.dark #message {
       color: #adbac7;
     }
@@ -142,49 +144,52 @@
       const stage = document.getElementById('stage');
       const message = document.getElementById('message');
       const zoomLabel = document.getElementById('zoom-label');
-      let scale = 1;
-      let translateX = 0;
-      let translateY = 0;
+      let svg = null;
+      let originalViewBox = null;
+      let viewBox = null;
       let dragging = false;
       let pointerX = 0;
       let pointerY = 0;
 
-      const updateTransform = () => {
-        stage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+      const updateViewBox = () => {
+        if (!svg || !viewBox) return;
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        const zoom = originalViewBox.width / viewBox.width;
+        zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
       };
 
-      const setScaleAt = (nextScale, clientX, clientY) => {
-        const boundedScale = Math.min(8, Math.max(0.05, nextScale));
-        const worldX = (clientX - translateX) / scale;
-        const worldY = (clientY - translateY) / scale;
-        scale = boundedScale;
-        translateX = clientX - worldX * scale;
-        translateY = clientY - worldY * scale;
-        updateTransform();
+      const clientToSvg = (clientX, clientY) => {
+        const point = svg.createSVGPoint();
+        point.x = clientX;
+        point.y = clientY;
+        return point.matrixTransform(svg.getScreenCTM().inverse());
+      };
+
+      const zoomAt = (factor, clientX, clientY) => {
+        if (!svg || !viewBox) return;
+        const currentZoom = originalViewBox.width / viewBox.width;
+        const nextZoom = Math.min(20, Math.max(0.1, currentZoom * factor));
+        const appliedFactor = nextZoom / currentZoom;
+        const focus = clientToSvg(clientX, clientY);
+
+        viewBox = {
+          x: focus.x - (focus.x - viewBox.x) / appliedFactor,
+          y: focus.y - (focus.y - viewBox.y) / appliedFactor,
+          width: viewBox.width / appliedFactor,
+          height: viewBox.height / appliedFactor
+        };
+        updateViewBox();
       };
 
       const fitToScreen = () => {
-        const svg = stage.querySelector('svg');
-        if (!svg) return;
-
-        const width = svg.getBoundingClientRect().width / scale || 1;
-        const height = svg.getBoundingClientRect().height / scale || 1;
-        const padding = 64;
-        scale = Math.min(
-          1,
-          (viewport.clientWidth - padding * 2) / width,
-          (viewport.clientHeight - padding * 2) / height
-        );
-        scale = Math.max(0.05, scale);
-        translateX = (viewport.clientWidth - width * scale) / 2;
-        translateY = (viewport.clientHeight - height * scale) / 2;
-        updateTransform();
+        if (!originalViewBox) return;
+        viewBox = { ...originalViewBox };
+        updateViewBox();
       };
 
       const zoomFromCenter = (factor) => {
-        setScaleAt(
-          scale * factor,
+        zoomAt(
+          factor,
           viewport.clientWidth / 2,
           viewport.clientHeight / 2
         );
@@ -192,7 +197,7 @@
 
       viewport.addEventListener('wheel', (event) => {
         event.preventDefault();
-        setScaleAt(scale * Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
+        zoomAt(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
       }, { passive: false });
 
       viewport.addEventListener('pointerdown', (event) => {
@@ -205,12 +210,14 @@
       });
 
       viewport.addEventListener('pointermove', (event) => {
-        if (!dragging) return;
-        translateX += event.clientX - pointerX;
-        translateY += event.clientY - pointerY;
+        if (!dragging || !svg) return;
+        const previous = clientToSvg(pointerX, pointerY);
+        const current = clientToSvg(event.clientX, event.clientY);
+        viewBox.x += previous.x - current.x;
+        viewBox.y += previous.y - current.y;
         pointerX = event.clientX;
         pointerY = event.clientY;
-        updateTransform();
+        updateViewBox();
       });
 
       const stopDragging = () => {
@@ -240,8 +247,36 @@
           document.body.classList.add('dark');
         }
         stage.innerHTML = data.svg;
+        svg = stage.querySelector('svg');
+        if (!svg) {
+          throw new Error('The diagram SVG is missing.');
+        }
+
+        const values = (svg.getAttribute('viewBox') || '')
+          .trim()
+          .split(/[\s,]+/)
+          .map(Number);
+        if (values.length !== 4 || values.some((value) => !Number.isFinite(value))) {
+          const width = svg.width.baseVal.value || svg.getBBox().width;
+          const height = svg.height.baseVal.value || svg.getBBox().height;
+          values.splice(0, values.length, 0, 0, width, height);
+        }
+
+        originalViewBox = {
+          x: values[0],
+          y: values[1],
+          width: values[2],
+          height: values[3]
+        };
+        viewBox = { ...originalViewBox };
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.maxWidth = 'none';
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         message.hidden = true;
-        requestAnimationFrame(fitToScreen);
+        updateViewBox();
       } catch (error) {
         message.textContent = error.message || 'Unable to load the diagram.';
       }
