@@ -12,7 +12,11 @@ const init = () => {
     const localStorageKey = 'last_state';
     const localStorageScrollBarKey = 'scroll_bar_settings';
     const localStorageThemeKey = 'theme_settings';
+    const localStorageViewModeKey = 'view_mode_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
+    const validViewModes = ['edit', 'split', 'preview'];
+    let viewMode = 'split';
+    let splitLeftRatio = 0.5;
     let mermaidRenderTimer = null;
     let mermaidRenderVersion = 0;
     // default template
@@ -130,7 +134,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
 
         editor.onDidScrollChange((e) => {
-            if (!scrollBarSync) {
+            if (!scrollBarSync || viewMode !== 'split') {
                 return;
             }
 
@@ -192,6 +196,44 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
     };
 
+    let openMermaidViewer = (element) => {
+        const chart = element.querySelector('svg');
+        if (!chart) {
+            return;
+        }
+
+        const viewerKey = `com.markdownlivepreview_mermaid_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        try {
+            localStorage.setItem(viewerKey, JSON.stringify({
+                svg: chart.outerHTML,
+                theme: document.documentElement.getAttribute('data-theme') || 'light'
+            }));
+
+            const viewerUrl = new URL('/mermaid-viewer.html', window.location.href);
+            viewerUrl.searchParams.set('key', viewerKey);
+            const viewerWindow = window.open(viewerUrl.toString(), '_blank');
+            if (!viewerWindow) {
+                localStorage.removeItem(viewerKey);
+                window.alert('The browser blocked the new tab. Please allow pop-ups and try again.');
+            }
+        } catch (error) {
+            localStorage.removeItem(viewerKey);
+            window.alert('Unable to open the diagram viewer.');
+        }
+    };
+
+    let addMermaidOpenButton = (element) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mermaid-open-button';
+        button.title = 'Open interactive viewer';
+        button.setAttribute('aria-label', 'Open diagram in a new tab');
+        button.setAttribute('data-html2canvas-ignore', 'true');
+        button.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3H3v10h10v-3M9 3h4v4M8 8l5-5"/></svg>';
+        button.addEventListener('click', () => openMermaidViewer(element));
+        element.appendChild(button);
+    };
+
     let renderMermaidDiagramsNow = async (theme = getMermaidTheme()) => {
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
@@ -221,6 +263,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 if (typeof bindFunctions === 'function') {
                     bindFunctions(element);
                 }
+                addMermaidOpenButton(element);
             } catch (error) {
                 showMermaidError(element, error);
             }
@@ -563,8 +606,65 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         }
     };
 
+    let loadViewModeSettings = () => {
+        const savedMode = Storehouse.getItem(localStorageNamespace, localStorageViewModeKey);
+        return validViewModes.includes(savedMode) ? savedMode : 'split';
+    };
+
+    let saveViewModeSettings = (mode) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageViewModeKey, mode, expiredAt);
+    };
+
+    let setViewMode = (mode, editor) => {
+        if (!validViewModes.includes(mode)) {
+            mode = 'split';
+        }
+
+        viewMode = mode;
+        const container = document.getElementById('container');
+        container.classList.remove('view-edit', 'view-split', 'view-preview');
+        container.classList.add(`view-${mode}`);
+
+        document.querySelectorAll('[data-view-mode]').forEach((button) => {
+            const active = button.dataset.viewMode === mode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+
+        const syncCheckbox = document.querySelector('#sync-scroll-checkbox');
+        if (syncCheckbox) {
+            syncCheckbox.disabled = mode !== 'split';
+        }
+
+        requestAnimationFrame(() => {
+            if (mode === 'split') {
+                const divider = document.getElementById('split-divider');
+                const leftPane = document.getElementById('edit');
+                const rightPane = document.getElementById('preview');
+                const availableWidth = container.clientWidth - divider.offsetWidth;
+                leftPane.style.width = `${availableWidth * splitLeftRatio}px`;
+                rightPane.style.width = `${availableWidth * (1 - splitLeftRatio)}px`;
+            }
+            editor.layout();
+            if (mode !== 'edit') {
+                scheduleMermaidRender();
+            }
+        });
+    };
+
+    let setupViewModeSwitcher = (editor) => {
+        document.querySelectorAll('[data-view-mode]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const mode = button.dataset.viewMode;
+                setViewMode(mode, editor);
+                saveViewModeSettings(mode);
+            });
+        });
+        setViewMode(loadViewModeSettings(), editor);
+    };
+
     let setupDivider = () => {
-        let lastLeftRatio = 0.5;
         const divider = document.getElementById('split-divider');
         const leftPane = document.getElementById('edit');
         const rightPane = document.getElementById('preview');
@@ -583,12 +683,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
 
         divider.addEventListener('mousedown', () => {
+            if (viewMode !== 'split') return;
             isDragging = true;
             divider.classList.add('active');
             document.body.style.cursor = 'col-resize';
         });
 
         divider.addEventListener('dblclick', () => {
+            if (viewMode !== 'split') return;
             const containerRect = container.getBoundingClientRect();
             const totalWidth = containerRect.width;
             const dividerWidth = divider.offsetWidth;
@@ -596,6 +698,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
             leftPane.style.width = halfWidth + 'px';
             rightPane.style.width = halfWidth + 'px';
+            splitLeftRatio = 0.5;
         });
 
         document.addEventListener('mousemove', (e) => {
@@ -612,7 +715,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
             leftPane.style.width = leftWidth + 'px';
             rightPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
-            lastLeftRatio = leftWidth / (totalWidth - dividerWidth);
+            splitLeftRatio = leftWidth / (totalWidth - dividerWidth);
         });
 
         document.addEventListener('mouseup', () => {
@@ -626,13 +729,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
 
         window.addEventListener('resize', () => {
+            if (viewMode !== 'split') return;
             const containerRect = container.getBoundingClientRect();
             const totalWidth = containerRect.width;
             const dividerWidth = divider.offsetWidth;
             const availableWidth = totalWidth - dividerWidth;
 
-            const newLeft = availableWidth * lastLeftRatio;
-            const newRight = availableWidth * (1 - lastLeftRatio);
+            const newLeft = availableWidth * splitLeftRatio;
+            const newRight = availableWidth * (1 - splitLeftRatio);
 
             leftPane.style.width = newLeft + 'px';
             rightPane.style.width = newRight + 'px';
@@ -665,6 +769,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     initThemeToggle(themeSettings);
 
     setupDivider();
+    setupViewModeSwitcher(editor);
 };
 
 window.addEventListener("load", () => {

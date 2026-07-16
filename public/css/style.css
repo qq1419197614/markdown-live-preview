@@ -59,6 +59,57 @@ header a:hover {
 
 #menu-items {
     display: flex;
+    align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 32px;
+}
+
+.view-mode-switcher {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #777;
+  border-radius: 4px;
+}
+
+.view-mode-switcher button {
+  display: grid;
+  width: 30px;
+  height: 28px;
+  padding: 6px;
+  place-items: center;
+  border: 0;
+  border-right: 1px solid #777;
+  color: #ddd;
+  background: transparent;
+  cursor: pointer;
+}
+
+.view-mode-switcher button:last-child {
+  border-right: 0;
+}
+
+.view-mode-switcher button:hover {
+  background: #555;
+}
+
+.view-mode-switcher button.active {
+  color: #fff;
+  background: #666;
+}
+
+.view-mode-switcher svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 #reset-button {
@@ -88,7 +139,7 @@ header input[type="checkbox"] {
 }
 
 #github {
-    padding-right: 32px;
+    padding-right: 0;
 }
 
 #github img {
@@ -149,6 +200,7 @@ footer {
 }
 
 .markdown-body .mermaid {
+  position: relative;
   overflow-x: auto;
   padding: 16px;
   text-align: center;
@@ -159,6 +211,47 @@ footer {
   max-width: 100%;
   height: auto;
   margin: 0 auto;
+}
+
+.mermaid-open-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  place-items: center;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  color: #57606a;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(31, 35, 40, 0.08);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.mermaid:hover .mermaid-open-button,
+.mermaid-open-button:focus-visible {
+  opacity: 1;
+}
+
+.mermaid-open-button:hover {
+  color: #24292f;
+  background: #fff;
+}
+
+.mermaid-open-button svg {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .markdown-body .mermaid-error {
@@ -175,6 +268,18 @@ footer {
   display: flex;
   height: 100%;
   width: 100%;
+}
+
+#container.view-edit #edit,
+#container.view-preview #preview {
+  width: 100% !important;
+}
+
+#container.view-edit #preview,
+#container.view-edit #split-divider,
+#container.view-preview #edit,
+#container.view-preview #split-divider {
+  display: none;
 }
 
 .editor-pane,
@@ -229,6 +334,54 @@ footer {
   background: #768390;
 }
 
+[data-theme="dark"] .view-mode-switcher {
+  border-color: #636c76;
+}
+
+[data-theme="dark"] .view-mode-switcher button {
+  border-right-color: #636c76;
+  color: #b1bac4;
+}
+
+[data-theme="dark"] .view-mode-switcher button:hover {
+  background: #444c56;
+}
+
+[data-theme="dark"] .view-mode-switcher button.active {
+  color: #fff;
+  background: #545d68;
+}
+
+[data-theme="dark"] .mermaid-open-button {
+  border-color: #444c56;
+  color: #adbac7;
+  background: rgba(45, 51, 59, 0.92);
+}
+
+[data-theme="dark"] .mermaid-open-button:hover {
+  color: #fff;
+  background: #373e47;
+}
+
 [data-theme="dark"] footer {
   background-color: #333;
+}
+
+@media (max-width: 760px) {
+  header {
+    padding: 8px;
+  }
+
+  #menu-items > div:first-child,
+  #sync-button {
+    display: none;
+  }
+
+  .header-actions {
+    padding-right: 16px;
+  }
+
+  .mermaid-open-button {
+    opacity: 1;
+  }
 }

@@ -30,10 +30,10 @@
         }
       })();
     </script>
-    <link rel="stylesheet" type="text/css" href="css/style.css?v=1.13.0">
+    <link rel="stylesheet" type="text/css" href="css/style.css?v=1.14.0">
     <link rel="icon" type="image/png" href="favicon.png">
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script type="module" src="/src/main.js?v=1.13.0"></script>
+    <script type="module" src="/src/main.js?v=1.14.0"></script>
     <title>Markdown Live Preview</title>
   </head>
 
@@ -60,7 +60,20 @@
               <span style="margin-left:12px;"><input type="checkbox" id="theme-checkbox"><label for="theme-checkbox">Dark mode</label></span>
             </div>
         </div>
-        <div id="github"><a href="https://github.com/tanabe/markdown-live-preview"><img src="image/GitHub-Mark-Light-32px.webp"></a></div>
+        <div class="header-actions">
+          <div id="view-mode-switcher" class="view-mode-switcher" role="group" aria-label="View mode">
+            <button type="button" data-view-mode="edit" title="Editor only" aria-label="Editor only">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10M3 6.5h10M3 9.5h10M3 12.5h7"/></svg>
+            </button>
+            <button type="button" data-view-mode="split" title="Editor and preview" aria-label="Editor and preview">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h11v11h-11zM8 2.5v11M4 5h2M4 7.5h2M10 5h2M10 7.5h2M10 10h2"/></svg>
+            </button>
+            <button type="button" data-view-mode="preview" title="Preview only" aria-label="Preview only">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h11v11h-11zM4.5 10.5l2.2-2.2 1.7 1.6 1.7-2 1.4 1.5M5.3 5.5h.01"/></svg>
+            </button>
+          </div>
+          <div id="github"><a href="https://github.com/tanabe/markdown-live-preview"><img src="image/GitHub-Mark-Light-32px.webp" alt="GitHub"></a></div>
+        </div>
     </header>
 
     <div id="container" class="split-container">
