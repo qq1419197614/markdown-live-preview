@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mermaid Viewer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #f6f8fa;
+    }
+
+    body.dark {
+      color-scheme: dark;
+      background: #212830;
+    }
+
+    #viewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #viewport.dragging {
+      cursor: grabbing;
+    }
+
+    #stage {
+      position: absolute;
+      inset: 0;
+    }
+
+    #stage svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+    }
+
+    #toolbar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border: 1px solid #d0d7de;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 3px 12px rgba(31, 35, 40, 0.15);
+    }
+
+    body.dark #toolbar {
+      border-color: #444c56;
+      background: rgba(45, 51, 59, 0.94);
+    }
+
+    #toolbar button {
+      width: 38px;
+      height: 36px;
+      border: 0;
+      border-right: 1px solid #d0d7de;
+      color: #24292f;
+      background: transparent;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    body.dark #toolbar button {
+      border-right-color: #444c56;
+      color: #adbac7;
+    }
+
+    #toolbar button:hover {
+      background: rgba(175, 184, 193, 0.2);
+    }
+
+    #toolbar button:last-of-type {
+      border-right: 0;
+    }
+
+    #zoom-label {
+      min-width: 58px;
+      padding: 0 8px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    #message {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      padding: 32px;
+      place-items: center;
+      color: #57606a;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    #message[hidden] {
+      display: none;
+    }
+
+    body.dark #message {
+      color: #adbac7;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport" aria-label="Mermaid diagram. Scroll to zoom and drag to pan.">
+    <div id="stage"></div>
+  </div>
+  <div id="toolbar" aria-label="Diagram controls">
+    <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+    <span id="zoom-label">100%</span>
+    <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="fit" type="button" title="Fit to screen" aria-label="Fit to screen">⌂</button>
+  </div>
+  <div id="message">Loading diagram…</div>
+  <script type="module" src="/src/mermaid-viewer.js"></script>
+</body>
+</html>

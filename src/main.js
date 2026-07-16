@@ -3,6 +3,7 @@ import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm'
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import mermaid from 'mermaid';
+import { deflate } from 'pako';
 
 const init = () => {
     let hasEdited = false;
@@ -197,27 +198,32 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     let openMermaidViewer = (element) => {
-        const chart = element.querySelector('svg');
-        if (!chart) {
+        const source = element.dataset.mermaidSource;
+        if (!source) {
             return;
         }
 
-        const viewerKey = `com.markdownlivepreview_mermaid_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         try {
-            localStorage.setItem(viewerKey, JSON.stringify({
-                svg: chart.outerHTML,
+            const compressed = deflate(JSON.stringify({
+                source,
                 theme: document.documentElement.getAttribute('data-theme') || 'light'
-            }));
+            }), { level: 9 });
+            let binary = '';
+            for (let index = 0; index < compressed.length; index += 0x8000) {
+                binary += String.fromCharCode(...compressed.subarray(index, index + 0x8000));
+            }
+            const payload = btoa(binary)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/g, '');
 
             const viewerUrl = new URL('/mermaid-viewer.html', window.location.href);
-            viewerUrl.searchParams.set('key', viewerKey);
+            viewerUrl.hash = `pako:${payload}`;
             const viewerWindow = window.open(viewerUrl.toString(), '_blank');
             if (!viewerWindow) {
-                localStorage.removeItem(viewerKey);
                 window.alert('The browser blocked the new tab. Please allow pop-ups and try again.');
             }
         } catch (error) {
-            localStorage.removeItem(viewerKey);
             window.alert('Unable to open the diagram viewer.');
         }
     };
