@@ -1,7 +1,7 @@
 name: Deploy static content to Pages
 on:
-  push:
-    branches: ["feature/preview"]
+#  push:
+#    branches: ["feature/preview"]
   workflow_dispatch:
 
 permissions:
